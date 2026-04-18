@@ -1,0 +1,89 @@
+# ============================
+# Projet Titanic - Machine Learning
+# ============================
+# 1. Importer la fonction d'upload
+from google.colab import files
+
+# 2. Uploader les fichiers depuis ton ordinateur
+uploaded = files.upload()
+
+# 3. Vérifier que les fichiers sont bien là
+import pandas as pd
+
+train = pd.read_csv("train.csv")
+test = pd.read_csv("test.csv")
+gender_submission = pd.read_csv("gender_submission.csv")
+
+print("✅ Fichiers chargés avec succès !")
+
+# 1. Import des librairies
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+
+# 2. Charger les fichiers
+train = pd.read_csv("train.csv")
+test = pd.read_csv("test.csv")
+gender_submission = pd.read_csv("gender_submission.csv")
+
+# 3. Prétraitement des données
+# Remplacer les valeurs manquantes
+train["Age"].fillna(train["Age"].median(), inplace=True)
+test["Age"].fillna(test["Age"].median(), inplace=True)
+train["Embarked"].fillna(train["Embarked"].mode()[0], inplace=True)
+test["Fare"].fillna(test["Fare"].median(), inplace=True)
+
+# Encodage des variables catégorielles
+for col in ["Sex", "Embarked"]:
+    le = LabelEncoder()
+    train[col] = le.fit_transform(train[col])
+    test[col] = le.transform(test[col])
+
+# 4. Sélection des features
+features = ["Pclass", "Sex", "Age", "SibSp", "Parch", "Fare", "Embarked"]
+X = train[features]
+y = train["Survived"]
+X_test_final = test[features]
+
+# Standardisation
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
+X_test_final = scaler.transform(X_test_final)
+
+# 5. Split train/test pour validation
+X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# 6. Définition des modèles
+models = {
+    "Régression logistique": LogisticRegression(max_iter=1000),
+    "Arbre de décision": DecisionTreeClassifier(max_depth=5),
+    "KNN": KNeighborsClassifier(n_neighbors=5),
+    "Random Forest": RandomForestClassifier(n_estimators=100, random_state=42)
+}
+
+# 7. Entraînement et évaluation
+for name, model in models.items():
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_val)
+    acc = accuracy_score(y_val, y_pred)
+    print(f"{name} -> Accuracy: {acc:.4f}")
+
+# 8. Choisir le meilleur modèle (exemple: Random Forest)
+best_model = RandomForestClassifier(n_estimators=100, random_state=42)
+best_model.fit(X, y)
+predictions = best_model.predict(X_test_final)
+
+# 9. Préparer le fichier de soumission Kaggle
+submission = pd.DataFrame({
+    "PassengerId": test["PassengerId"],
+    "Survived": predictions
+})
+submission.to_csv("submission.csv", index=False)
+
+print("✅ Fichier submission.csv généré avec succès !")
